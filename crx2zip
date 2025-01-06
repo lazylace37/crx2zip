@@ -1,0 +1,31 @@
+#!/bin/sh
+
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <file.crx>"
+    exit 1
+fi
+
+# Get the magic number
+magic=$(dd if=$1 count=4 bs=1 status=none)
+if [ "$magic" != "Cr24" ]; then
+    echo "Not a CRX file"
+    exit 1
+fi
+
+# Get the version
+version=$(dd if=$1 skip=4 count=4 bs=1 status=none | hexdump -e '1/4 "%u\n"')
+if [ $version -ne 3 ]; then
+    echo "Not a CRX v3 file"
+    exit 1
+fi
+
+# Get the length from the crx header
+len=$(dd if=$1 skip=8 count=4 bs=1 status=none | hexdump -e '1/4 "%u\n"')
+
+# The zip starts from len + 12
+start=$((len + 12))
+
+# Extract the zip
+tail -c +$(($start + 1)) $1 > $1.zip
+printf "Extracted: %s\n" $1.zip
+
